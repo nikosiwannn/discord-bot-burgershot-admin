@@ -6,7 +6,6 @@ import {
   SlashCommandBuilder,
   REST,
   Routes,
-  PermissionFlagsBits,
   type Interaction,
   type Guild,
   type TextChannel,
@@ -14,7 +13,7 @@ import {
 } from "discord.js";
 import { db } from "../db";
 import { employees, actionHistory, guildConfig, positions } from "../db/schema";
-import { eq, and, desc, sql, asc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import {
   COLOR_PRIMARY,
   COLOR_SUCCESS,
@@ -79,9 +78,12 @@ async function checkPermission(
     await interaction.editReply({ content: "❌ Ta komenda działa tylko na serwerze." });
     return false;
   }
+
   const config = await getGuildConfig(guildId);
   if (!config) {
-    await interaction.editReply({ content: "❌ Brak konfiguracji serwera. Ustaw config w panelu webowym." });
+    await interaction.editReply({
+      content: "❌ Brak konfiguracji serwera. Ustaw config w panelu webowym.",
+    });
     return false;
   }
 
@@ -208,6 +210,28 @@ async function registerCommands(token: string, clientId: string) {
       )
       .addStringOption((opt) =>
         opt.setName("powód").setDescription("Powód przyznania minusa").setRequired(true)
+      ),
+
+    // =================== NOWA KOMENDA: /nagana ===================
+    new SlashCommandBuilder()
+      .setName("nagana")
+      .setDescription("Przyznaj naganę pracownikowi (ręcznie, bez zbierania minusów)")
+      .addUserOption((opt) =>
+        opt.setName("użytkownik").setDescription("Komu przyznać naganę").setRequired(true)
+      )
+      .addStringOption((opt) =>
+        opt.setName("powód").setDescription("Powód przyznania nagany").setRequired(true)
+      ),
+
+    // =================== NOWA KOMENDA: /pochwala ===================
+    new SlashCommandBuilder()
+      .setName("pochwala")
+      .setDescription("Przyznaj pochwałę pracownikowi (ręcznie, bez zbierania plusów)")
+      .addUserOption((opt) =>
+        opt.setName("użytkownik").setDescription("Komu przyznać pochwałę").setRequired(true)
+      )
+      .addStringOption((opt) =>
+        opt.setName("powód").setDescription("Powód przyznania pochwały").setRequired(true)
       ),
 
     new SlashCommandBuilder()
@@ -341,8 +365,10 @@ async function updateCommendationRoles(
   config: any,
   commendations: number
 ) {
-  if (config.rolePochwala1Id) await safeRemoveRole(guild, userId, config.rolePochwala1Id);
-  if (config.rolePochwala2Id) await safeRemoveRole(guild, userId, config.rolePochwala2Id);
+  if (config.rolePochwala1Id)
+    await safeRemoveRole(guild, userId, config.rolePochwala1Id);
+  if (config.rolePochwala2Id)
+    await safeRemoveRole(guild, userId, config.rolePochwala2Id);
 
   if (commendations === 2 && config.rolePochwala2Id) {
     await safeAddRole(guild, userId, config.rolePochwala2Id);
@@ -357,8 +383,10 @@ async function updateReprimandRoles(
   config: any,
   reprimands: number
 ) {
-  if (config.roleNagana1Id) await safeRemoveRole(guild, userId, config.roleNagana1Id);
-  if (config.roleNagana2Id) await safeRemoveRole(guild, userId, config.roleNagana2Id);
+  if (config.roleNagana1Id)
+    await safeRemoveRole(guild, userId, config.roleNagana1Id);
+  if (config.roleNagana2Id)
+    await safeRemoveRole(guild, userId, config.roleNagana2Id);
 
   if (reprimands === 2 && config.roleNagana2Id) {
     await safeAddRole(guild, userId, config.roleNagana2Id);
@@ -425,6 +453,7 @@ async function handleZatrudnij(interaction: any) {
   const level = interaction.options.getInteger("lvl");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji serwera!" });
     return;
@@ -447,13 +476,13 @@ async function handleZatrudnij(interaction: any) {
   const pos = await getPositionByLevel(guild.id, level);
   if (!pos) {
     const allPositions = await getPositions(guild.id);
-    const availableLevels = allPositions.map(p => `Lv.${p.level} = ${p.name}`).join(", ");
+    const availableLevels = allPositions.map((p) => `Lv.${p.level} = ${p.name}`).join(", ");
     await interaction.editReply({
       content: `❌ Stanowisko z poziomem **${level}** nie istnieje!\n\n📋 Dostępne stanowiska: ${availableLevels || "brak - dodaj je w panelu"}`,
     });
     return;
   }
-  
+
   const positionName = pos.name;
 
   // Create employee record
@@ -541,6 +570,7 @@ async function handleAwans(interaction: any) {
   const targetUser = interaction.options.getUser("użytkownik");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -629,6 +659,7 @@ async function handleDegraduj(interaction: any) {
   const reason = interaction.options.getString("powód");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -700,6 +731,7 @@ async function handleDegraduj(interaction: any) {
         `> 📤 **Poprzednie stanowisko:** ${emp.position}\n` +
         `> 📥 **Nowe stanowisko:** ${prevPos.name}\n` +
         `> 📜 **Powód:** ${reason}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
         `> 👮 **Degradował:** <@${interaction.user.id}>`
     )
     .setColor(COLOR_DEMOTE)
@@ -715,6 +747,7 @@ async function handleZwolnij(interaction: any) {
   const reason = interaction.options.getString("powód");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -773,22 +806,6 @@ async function handleZwolnij(interaction: any) {
 
   await interaction.editReply({ embeds: [replyEmbed] });
 
-  // DM
-  const dmEmbed = new EmbedBuilder()
-    .setTitle("❌ Zostałeś zwolniony z Burger Shot")
-    .setDescription(
-      `Niestety Twoje zatrudnienie w **Burger Shot** zostało zakończone.\n\n` +
-        `> 💼 **Stanowisko:** ${emp.position}\n` +
-        `> 📜 **Powód:** ${reason}\n` +
-        `> 📅 **Data:** ${formatDatePL(new Date())}`
-    )
-    .setColor(COLOR_FIRE)
-    .setFooter({ text: "🍔 BurgerShot HR" })
-    .setTimestamp();
-
-  await sendDM(targetUser.id, dmEmbed);
-
-  // Log
   const logEmbed = new EmbedBuilder()
     .setAuthor({ name: "🍔 BurgerShot HR • Zwolnienie" })
     .setTitle(`❌ Zwolnienie Pracownika`)
@@ -797,6 +814,7 @@ async function handleZwolnij(interaction: any) {
         `> 👤 **Pracownik:** <@${targetUser.id}> (${targetUser.username})\n` +
         `> 💼 **Stanowisko:** ${emp.position}\n` +
         `> 📜 **Powód:** ${reason}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
         `> 👮 **Zwolnił:** <@${interaction.user.id}>`
     )
     .setColor(COLOR_FIRE)
@@ -814,6 +832,7 @@ async function handlePlus(interaction: any) {
   const reason = interaction.options.getString("powód");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -833,7 +852,6 @@ async function handlePlus(interaction: any) {
   const threshold = config.plusesForCommendation;
   let newPlusCount = emp.plusCount + 1;
   let newCommendations = emp.commendations;
-  let autoPromoted = false;
 
   await db.insert(actionHistory).values({
     employeeId: emp.id,
@@ -850,7 +868,7 @@ async function handlePlus(interaction: any) {
     newPlusCount = 0;
     newCommendations += 1;
 
-    // Remove plus roles
+    // Remove plus roles when getting commendation
     if (config.rolePlus1Id) await safeRemoveRole(guild, targetUser.id, config.rolePlus1Id);
     if (config.rolePlus2Id) await safeRemoveRole(guild, targetUser.id, config.rolePlus2Id);
     if (config.rolePlus3Id) await safeRemoveRole(guild, targetUser.id, config.rolePlus3Id);
@@ -864,7 +882,6 @@ async function handlePlus(interaction: any) {
       details: `Pochwała ${newCommendations}/2`,
     });
 
-    // Update commendation roles
     await updateCommendationRoles(guild, targetUser.id, config, newCommendations);
 
     // Log commendation
@@ -883,20 +900,18 @@ async function handlePlus(interaction: any) {
 
     await sendLog(guild, config.channelPochwayNaganyId, commEmbed);
 
-    // Check for auto-promotion (2/2 commendations)
+    // If 2/2 commendations - auto promote
     if (newCommendations >= 2) {
       const nextPos = await getNextPosition(guild.id, emp.position);
       if (nextPos) {
-        autoPromoted = true;
-
         const oldPos = await getPositionByName(guild.id, emp.position);
         if (oldPos) await safeRemoveRole(guild, targetUser.id, oldPos.roleId);
         await safeAddRole(guild, targetUser.id, nextPos.roleId);
 
-        // Reset commendations
-        newCommendations = 0;
-        if (config.rolePochwala1Id) await safeRemoveRole(guild, targetUser.id, config.rolePochwala1Id);
-        if (config.rolePochwala2Id) await safeRemoveRole(guild, targetUser.id, config.rolePochwala2Id);
+        await db
+          .update(employees)
+          .set({ position: nextPos.name })
+          .where(eq(employees.id, emp.id));
 
         await db.insert(actionHistory).values({
           employeeId: emp.id,
@@ -906,94 +921,67 @@ async function handlePlus(interaction: any) {
           performedByUsername: "SYSTEM",
           previousPosition: emp.position,
           newPosition: nextPos.name,
-          details: "Automatyczny awans za 2/2 pochwały",
+          details: "Auto-awans za 2/2 pochwały",
         });
 
-        // DM about auto promote
-        const promDmEmbed = new EmbedBuilder()
-          .setTitle("🚀 Automatyczny Awans!")
-          .setDescription(
-            `Gratulacje **${targetUser.username}**!\n\n` +
-              `Za zdobycie **2/2 pochwał** otrzymujesz automatyczny awans!\n\n` +
-              `> 📤 **Poprzednie:** ${emp.position}\n` +
-              `> 📥 **Nowe:** ${nextPos.name}\n\n` +
-              `Tak trzymaj! 🎉`
-          )
-          .setColor(COLOR_PROMOTE)
-          .setTimestamp();
-        await sendDM(targetUser.id, promDmEmbed);
+        // Reset commendations after auto-promote
+        newCommendations = 0;
 
-        // Log auto promote
-        const autoPromEmbed = new EmbedBuilder()
-          .setAuthor({ name: "🍔 BurgerShot HR • Automatyczny Awans" })
-          .setTitle(`🚀 Automatyczny Awans`)
+        // Reset commendation roles
+        if (config.rolePochwala1Id)
+          await safeRemoveRole(guild, targetUser.id, config.rolePochwala1Id);
+        if (config.rolePochwala2Id)
+          await safeRemoveRole(guild, targetUser.id, config.rolePochwala2Id);
+
+        await db.insert(actionHistory).values({
+          employeeId: emp.id,
+          discordUserId: targetUser.id,
+          actionType: "commendation_reset",
+          performedBy: "SYSTEM",
+          performedByUsername: "SYSTEM",
+          details: "Reset pochwał po auto-awansie",
+        });
+
+        const promoEmbed = new EmbedBuilder()
+          .setAuthor({ name: "🍔 BurgerShot HR • Auto-Awans" })
+          .setTitle(`🚀 Automatyczny Awans!`)
           .setDescription(
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
               `> 👤 **Pracownik:** <@${targetUser.id}> (${targetUser.username})\n` +
               `> 📤 **Poprzednie:** ${emp.position}\n` +
               `> 📥 **Nowe:** ${nextPos.name}\n` +
-              `> 🏆 **Powód:** 2/2 Pochwały\n` +
-              `> 📅 **Data:** ${formatDatePL(new Date())}`
+              `> 📅 **Data:** ${formatDatePL(new Date())}\n\n` +
+              `Pracownik zebrał 2/2 pochwały i otrzymał automatyczny awans!`
           )
           .setColor(COLOR_PROMOTE)
           .setTimestamp();
 
-        await sendLog(guild, config.channelAwanseDegradyId, autoPromEmbed);
-
-        // Update employee position
-        await db
-          .update(employees)
-          .set({
-            position: nextPos.name,
-            plusCount: newPlusCount,
-            commendations: newCommendations,
-            updatedAt: new Date(),
-          })
-          .where(eq(employees.id, emp.id));
-      } else {
-        // No higher position - just save
-        await db
-          .update(employees)
-          .set({
-            plusCount: newPlusCount,
-            commendations: newCommendations,
-            updatedAt: new Date(),
-          })
-          .where(eq(employees.id, emp.id));
+        await sendLog(guild, config.channelAwanseDegradyId, promoEmbed);
       }
-    } else {
-      await db
-        .update(employees)
-        .set({
-          plusCount: newPlusCount,
-          commendations: newCommendations,
-          updatedAt: new Date(),
-        })
-        .where(eq(employees.id, emp.id));
     }
   } else {
-    // Just add plus, no commendation yet
+    // Not enough for commendation yet - update plus roles
     await updatePlusRoles(guild, targetUser.id, config, newPlusCount);
-    await db
-      .update(employees)
-      .set({
-        plusCount: newPlusCount,
-        updatedAt: new Date(),
-      })
-      .where(eq(employees.id, emp.id));
   }
 
-  const stars = "⭐".repeat(Math.min(newPlusCount, threshold));
+  await db
+    .update(employees)
+    .set({
+      plusCount: newPlusCount,
+      commendations: newCommendations,
+      updatedAt: new Date(),
+    })
+    .where(eq(employees.id, emp.id));
+
   const replyEmbed = new EmbedBuilder()
-    .setTitle("➕ Plus Przyznany!")
+    .setTitle("➕ Plus Przyznany")
     .setDescription(
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `> 👤 **Otrzymał:** <@${targetUser.id}>\n` +
         `> 📜 **Powód:** ${reason}\n` +
-        `> ${stars} **Stan:** ${newPlusCount}/${threshold} Plusów\n` +
+        `> ⭐ **Stan:** ${newPlusCount}/${threshold} Plusów\n` +
         `> 🏆 **Pochwały:** ${newCommendations}/2\n` +
-        `> 👮 **Przyznał:** <@${interaction.user.id}>` +
-        (autoPromoted ? `\n\n🚀 **Automatyczny awans!**` : "")
+        `> 👮 **Przyznał:** <@${interaction.user.id}>`
     )
     .setColor(COLOR_PLUS)
     .setFooter({ text: "🍔 BurgerShot HR" })
@@ -1010,7 +998,7 @@ async function handlePlus(interaction: any) {
         `> 👮 **Przyznał:** <@${interaction.user.id}>\n` +
         `> 👤 **Otrzymał:** <@${targetUser.id}>\n` +
         `> 📜 **Powód:** ${reason}\n` +
-        `> ${stars} **Stan:** ${newPlusCount}/${threshold} Plusów`
+        `> ⭐ **Stan:** ${newPlusCount}/${threshold} Plusów`
     )
     .setColor(COLOR_PLUS)
     .setTimestamp();
@@ -1027,6 +1015,7 @@ async function handleMinus(interaction: any) {
   const reason = interaction.options.getString("powód");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -1156,6 +1145,332 @@ async function handleMinus(interaction: any) {
   await sendLog(guild, config.channelPlusyMinusyId, logEmbed);
 }
 
+// =================== NOWA KOMENDA: /nagana ===================
+
+async function handleNagana(interaction: any) {
+  if (!(await checkPermission(interaction, "manager"))) return;
+
+  const targetUser = interaction.options.getUser("użytkownik");
+  const reason = interaction.options.getString("powód");
+  const guild = interaction.guild as Guild;
+  const config = await getGuildConfig(guild.id);
+
+  if (!config) {
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
+    return;
+  }
+
+  const emps = await db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
+
+  if (emps.length === 0) {
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
+    return;
+  }
+
+  const emp = emps[0];
+
+  // Sprawdź czy pracownik nie ma już 2/2 nagan
+  if (emp.reprimands >= 2) {
+    await interaction.editReply({
+      content: `❌ **${targetUser.username}** ma już **2/2 nagany**! Użyj \`/degraduj\` lub \`/zwolnij\`.`,
+    });
+    return;
+  }
+
+  const newReprimands = emp.reprimands + 1;
+
+  // Zapisz akcję w historii
+  await db.insert(actionHistory).values({
+    employeeId: emp.id,
+    discordUserId: targetUser.id,
+    actionType: "reprimand",
+    performedBy: interaction.user.id,
+    performedByUsername: interaction.user.username,
+    reason,
+    details: `Nagana ręczna ${newReprimands}/2 — Powód: ${reason}`,
+  });
+
+  // Zaktualizuj liczbę nagan w DB
+  await db
+    .update(employees)
+    .set({
+      reprimands: newReprimands,
+      updatedAt: new Date(),
+    })
+    .where(eq(employees.id, emp.id));
+
+  // Zaktualizuj role nagan
+  await updateReprimandRoles(guild, targetUser.id, config, newReprimands);
+
+  // Odpowiedź
+  const replyEmbed = new EmbedBuilder()
+    .setTitle("⚠️ Nagana Przyznana")
+    .setDescription(
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `> 👤 **Pracownik:** <@${targetUser.id}>\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> ⚠️ **Nagany:** ${newReprimands}/2\n` +
+        `> 💼 **Stanowisko:** ${emp.position}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
+        `> 👮 **Przyznał:** <@${interaction.user.id}>`
+    )
+    .setColor(COLOR_REPRIMAND)
+    .setFooter({ text: "🍔 BurgerShot HR" })
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [replyEmbed] });
+
+  // Log do #pochwały-nagany
+  const logEmbed = new EmbedBuilder()
+    .setAuthor({ name: "🍔 BurgerShot HR • Nagana (ręczna)" })
+    .setTitle(`⚠️ Nagana ${newReprimands}/2`)
+    .setDescription(
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `> 👤 **Pracownik:** <@${targetUser.id}> (${targetUser.username})\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> ⚠️ **Nagany:** ${newReprimands}/2\n` +
+        `> 💼 **Stanowisko:** ${emp.position}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
+        `> 👮 **Przyznał:** <@${interaction.user.id}>\n\n` +
+        `Nagana przyznana ręcznie przez przełożonego.`
+    )
+    .setColor(COLOR_REPRIMAND)
+    .setTimestamp();
+
+  await sendLog(guild, config.channelPochwayNaganyId, logEmbed);
+
+  // Jeśli 2/2 nagan - powiadom zarząd
+  if (newReprimands >= 2) {
+    const notifEmbed = new EmbedBuilder()
+      .setTitle("🚨 UWAGA — 2/2 Nagany!")
+      .setDescription(
+        `Pracownik <@${targetUser.id}> (${targetUser.username}) otrzymał **2/2 nagany**!\n\n` +
+          `Stanowisko: **${emp.position}**\n` +
+          `Powód ostatniej nagany: **${reason}**\n\n` +
+          `⚠️ Pracownik powinien zostać degradowany lub zwolniony.\n` +
+          `Użyj \`/degraduj\` lub \`/zwolnij\`.`
+      )
+      .setColor(COLOR_ERROR)
+      .setTimestamp();
+
+    await sendLog(guild, config.channelAwanseDegradyId, notifEmbed);
+  }
+
+  // DM do pracownika
+  const dmEmbed = new EmbedBuilder()
+    .setTitle("⚠️ Otrzymałeś naganę!")
+    .setDescription(
+      `Cześć **${targetUser.username}**,\n\n` +
+        `Otrzymałeś naganę w **Burger Shot**.\n\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> ⚠️ **Twoje nagany:** ${newReprimands}/2\n` +
+        `> 👮 **Przyznał:** ${interaction.user.username}\n\n` +
+        (newReprimands >= 2
+          ? `🚨 **Masz już 2/2 nagany!** Grozi Ci degradacja lub zwolnienie.`
+          : `⚠️ Uważaj — kolejna nagana może skutkować degradacją lub zwolnieniem.`)
+    )
+    .setColor(COLOR_REPRIMAND)
+    .setFooter({ text: "🍔 BurgerShot HR" })
+    .setTimestamp();
+
+  await sendDM(targetUser.id, dmEmbed);
+}
+
+// =================== NOWA KOMENDA: /pochwala ===================
+
+async function handlePochwala(interaction: any) {
+  if (!(await checkPermission(interaction, "manager"))) return;
+
+  const targetUser = interaction.options.getUser("użytkownik");
+  const reason = interaction.options.getString("powód");
+  const guild = interaction.guild as Guild;
+  const config = await getGuildConfig(guild.id);
+
+  if (!config) {
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
+    return;
+  }
+
+  const emps = await db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
+
+  if (emps.length === 0) {
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
+    return;
+  }
+
+  const emp = emps[0];
+
+  // Sprawdź czy pracownik nie ma już 2/2 pochwał
+  if (emp.commendations >= 2) {
+    await interaction.editReply({
+      content: `❌ **${targetUser.username}** ma już **2/2 pochwały**! Pochwały zostaną zresetowane po awansie.`,
+    });
+    return;
+  }
+
+  const newCommendations = emp.commendations + 1;
+
+  // Zapisz akcję w historii
+  await db.insert(actionHistory).values({
+    employeeId: emp.id,
+    discordUserId: targetUser.id,
+    actionType: "commendation",
+    performedBy: interaction.user.id,
+    performedByUsername: interaction.user.username,
+    reason,
+    details: `Pochwała ręczna ${newCommendations}/2 — Powód: ${reason}`,
+  });
+
+  // Zaktualizuj liczbę pochwał w DB
+  await db
+    .update(employees)
+    .set({
+      commendations: newCommendations,
+      updatedAt: new Date(),
+    })
+    .where(eq(employees.id, emp.id));
+
+  // Zaktualizuj role pochwał
+  await updateCommendationRoles(guild, targetUser.id, config, newCommendations);
+
+  // Odpowiedź
+  const replyEmbed = new EmbedBuilder()
+    .setTitle("🏆 Pochwała Przyznana")
+    .setDescription(
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `> 👤 **Pracownik:** <@${targetUser.id}>\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> 🏆 **Pochwały:** ${newCommendations}/2\n` +
+        `> 💼 **Stanowisko:** ${emp.position}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
+        `> 👮 **Przyznał:** <@${interaction.user.id}>`
+    )
+    .setColor(COLOR_COMMENDATION)
+    .setFooter({ text: "🍔 BurgerShot HR" })
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [replyEmbed] });
+
+  // Log do #pochwały-nagany
+  const logEmbed = new EmbedBuilder()
+    .setAuthor({ name: "🍔 BurgerShot HR • Pochwała (ręczna)" })
+    .setTitle(`🏆 Pochwała ${newCommendations}/2`)
+    .setDescription(
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `> 👤 **Pracownik:** <@${targetUser.id}> (${targetUser.username})\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> 🏆 **Pochwały:** ${newCommendations}/2\n` +
+        `> 💼 **Stanowisko:** ${emp.position}\n` +
+        `> 📅 **Data:** ${formatDatePL(new Date())}\n` +
+        `> 👮 **Przyznał:** <@${interaction.user.id}>\n\n` +
+        `Pochwała przyznana ręcznie przez przełożonego.`
+    )
+    .setColor(COLOR_COMMENDATION)
+    .setTimestamp();
+
+  await sendLog(guild, config.channelPochwayNaganyId, logEmbed);
+
+  // Jeśli 2/2 pochwał - automatyczny awans
+  if (newCommendations >= 2) {
+    const nextPos = await getNextPosition(guild.id, emp.position);
+    if (nextPos) {
+      const oldPos = await getPositionByName(guild.id, emp.position);
+      if (oldPos) await safeRemoveRole(guild, targetUser.id, oldPos.roleId);
+      await safeAddRole(guild, targetUser.id, nextPos.roleId);
+
+      await db
+        .update(employees)
+        .set({
+          position: nextPos.name,
+          commendations: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(employees.id, emp.id));
+
+      await db.insert(actionHistory).values({
+        employeeId: emp.id,
+        discordUserId: targetUser.id,
+        actionType: "auto_promote",
+        performedBy: "SYSTEM",
+        performedByUsername: "SYSTEM",
+        previousPosition: emp.position,
+        newPosition: nextPos.name,
+        details: "Auto-awans za 2/2 pochwały",
+      });
+
+      // Reset commendation roles
+      if (config.rolePochwala1Id)
+        await safeRemoveRole(guild, targetUser.id, config.rolePochwala1Id);
+      if (config.rolePochwala2Id)
+        await safeRemoveRole(guild, targetUser.id, config.rolePochwala2Id);
+
+      await db.insert(actionHistory).values({
+        employeeId: emp.id,
+        discordUserId: targetUser.id,
+        actionType: "commendation_reset",
+        performedBy: "SYSTEM",
+        performedByUsername: "SYSTEM",
+        details: "Reset pochwał po auto-awansie",
+      });
+
+      const promoEmbed = new EmbedBuilder()
+        .setAuthor({ name: "🍔 BurgerShot HR • Auto-Awans" })
+        .setTitle(`🚀 Automatyczny Awans!`)
+        .setDescription(
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `> 👤 **Pracownik:** <@${targetUser.id}> (${targetUser.username})\n` +
+            `> 📤 **Poprzednie:** ${emp.position}\n` +
+            `> 📥 **Nowe:** ${nextPos.name}\n` +
+            `> 📅 **Data:** ${formatDatePL(new Date())}\n\n` +
+            `Pracownik zebrał 2/2 pochwały i otrzymał automatyczny awans!`
+        )
+        .setColor(COLOR_PROMOTE)
+        .setTimestamp();
+
+      await sendLog(guild, config.channelAwanseDegradyId, promoEmbed);
+
+      // Uzupełnij odpowiedź o info o awansie
+      const promoReplyEmbed = new EmbedBuilder()
+        .setTitle("🚀 Auto-Awans!")
+        .setDescription(
+          `**${targetUser.username}** zebrał 2/2 pochwały i otrzymał automatyczny awans!\n\n` +
+            `> 📤 **Poprzednie:** ${emp.position}\n` +
+            `> 📥 **Nowe:** ${nextPos.name}`
+        )
+        .setColor(COLOR_PROMOTE)
+        .setFooter({ text: "🍔 BurgerShot HR" })
+        .setTimestamp();
+
+      await interaction.followUp({ embeds: [promoReplyEmbed] });
+    }
+  }
+
+  // DM do pracownika
+  const dmEmbed = new EmbedBuilder()
+    .setTitle("🏆 Otrzymałeś pochwałę!")
+    .setDescription(
+      `Cześć **${targetUser.username}**!\n\n` +
+        `Otrzymałeś pochwałę w **Burger Shot**! 🎉\n\n` +
+        `> 📜 **Powód:** ${reason}\n` +
+        `> 🏆 **Twoje pochwały:** ${newCommendations}/2\n` +
+        `> 👮 **Przyznał:** ${interaction.user.username}\n\n` +
+        (newCommendations >= 2
+          ? `🚀 **Gratulacje! Zebrałeś 2/2 pochwały — otrzymujesz automatyczny awans!**`
+          : `Jeszcze jedna pochwała i otrzymasz automatyczny awans! 💪`)
+    )
+    .setColor(COLOR_COMMENDATION)
+    .setFooter({ text: "🍔 BurgerShot HR" })
+    .setTimestamp();
+
+  await sendDM(targetUser.id, dmEmbed);
+}
+
 // =================== KARTA PRACOWNIKA ===================
 
 async function handleKarta(interaction: any) {
@@ -1189,7 +1504,9 @@ async function handleKarta(interaction: any) {
 
   const hires = history.filter((h) => h.actionType === "hire");
   const fires = history.filter((h) => h.actionType === "fire");
-  const promotions = history.filter((h) => h.actionType === "promote" || h.actionType === "auto_promote");
+  const promotions = history.filter(
+    (h) => h.actionType === "promote" || h.actionType === "auto_promote"
+  );
   const demotions = history.filter((h) => h.actionType === "demote");
   const pluses = history.filter((h) => h.actionType === "plus");
   const minuses = history.filter((h) => h.actionType === "minus");
@@ -1226,6 +1543,7 @@ async function handleKarta(interaction: any) {
     }
     historyText += "\n";
   }
+
   if (history.length > 10) {
     historyText += `\n*...i ${history.length - 10} więcej wpisów*`;
   }
@@ -1282,7 +1600,9 @@ async function handlePracownik(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.editReply({ content: "❌ Ten użytkownik nie jest aktywnym pracownikiem!" });
+    await interaction.editReply({
+      content: "❌ Ten użytkownik nie jest aktywnym pracownikiem!",
+    });
     return;
   }
 
@@ -1318,10 +1638,12 @@ async function handleStatystyki(interaction: any) {
   if (!(await checkPermission(interaction, "support"))) return;
 
   const allHistory = await db.select().from(actionHistory);
+
   const activeEmps = await db
     .select()
     .from(employees)
     .where(eq(employees.status, "active"));
+
   const firedEmps = await db
     .select()
     .from(employees)
@@ -1330,7 +1652,9 @@ async function handleStatystyki(interaction: any) {
   const stats = {
     hired: allHistory.filter((h) => h.actionType === "hire").length,
     fired: allHistory.filter((h) => h.actionType === "fire").length,
-    promoted: allHistory.filter((h) => h.actionType === "promote" || h.actionType === "auto_promote").length,
+    promoted: allHistory.filter(
+      (h) => h.actionType === "promote" || h.actionType === "auto_promote"
+    ).length,
     demoted: allHistory.filter((h) => h.actionType === "demote").length,
     pluses: allHistory.filter((h) => h.actionType === "plus").length,
     minuses: allHistory.filter((h) => h.actionType === "minus").length,
@@ -1388,7 +1712,8 @@ async function handleRanking(interaction: any) {
       emp,
       totalPluses: empHistory.filter((h) => h.actionType === "plus").length,
       totalMinuses: empHistory.filter((h) => h.actionType === "minus").length,
-      totalCommendations: empHistory.filter((h) => h.actionType === "commendation").length,
+      totalCommendations: empHistory.filter((h) => h.actionType === "commendation")
+        .length,
       totalPromotions: empHistory.filter(
         (h) => h.actionType === "promote" || h.actionType === "auto_promote"
       ).length,
@@ -1406,7 +1731,7 @@ async function handleRanking(interaction: any) {
   const medals = ["🥇", "🥈", "🥉"];
   for (let i = 0; i < Math.min(rankings.length, 15); i++) {
     const r = rankings[i];
-    const medal = i < 3 ? medals[i] : `**${i + 1}.**`;
+    const medal = medals[i] ?? `**#${i + 1}**`;
     rankText +=
       `${medal} <@${r.emp.discordUserId}> — **${r.emp.position}**\n` +
       `> ➕ ${r.totalPluses} plusów | 🏆 ${r.totalCommendations} pochwał | ➖ ${r.totalMinuses} minusów | 📈 ${r.totalPromotions} awansów\n\n`;
@@ -1415,9 +1740,7 @@ async function handleRanking(interaction: any) {
   const embed = new EmbedBuilder()
     .setAuthor({ name: "🍔 BurgerShot HR • Ranking" })
     .setTitle("🏆 Ranking Pracowników")
-    .setDescription(
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${rankText}`
-    )
+    .setDescription(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${rankText}`)
     .setColor(COLOR_COMMENDATION)
     .setFooter({ text: `Łącznie ${activeEmps.length} aktywnych pracowników` })
     .setTimestamp();
@@ -1434,6 +1757,7 @@ async function handleWypowiedzenie(interaction: any) {
   const reason = interaction.options.getString("powód");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
+
   if (!config) {
     await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
@@ -1545,6 +1869,12 @@ async function handleInteraction(interaction: Interaction) {
       case "minus":
         await handleMinus(interaction);
         break;
+      case "nagana":
+        await handleNagana(interaction);
+        break;
+      case "pochwala":
+        await handlePochwala(interaction);
+        break;
       case "karta":
         await handleKarta(interaction);
         break;
@@ -1564,9 +1894,16 @@ async function handleInteraction(interaction: Interaction) {
   } catch (err) {
     console.error("[BOT] Command error:", err);
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: "❌ Wystąpił błąd. Spróbuj ponownie.", ephemeral: true }).catch(() => {});
+      await interaction
+        .followUp({
+          content: "❌ Wystąpił błąd. Spróbuj ponownie.",
+          ephemeral: true,
+        })
+        .catch(() => {});
     } else {
-      await interaction.editReply({ content: "❌ Wystąpił błąd. Spróbuj ponownie." }).catch(() => {});
+      await interaction
+        .editReply({ content: "❌ Wystąpił błąd. Spróbuj ponownie." })
+        .catch(() => {});
     }
   }
 }
@@ -1641,6 +1978,7 @@ export async function startBot(token: string) {
           "❌ Nieprawidłowy token! Sprawdź czy skopiowałeś cały token z Discord Developer Portal.",
       };
     }
+
     if (msg.includes("disallowed intents") || msg.includes("Disallowed Intents")) {
       return {
         success: false,
@@ -1648,8 +1986,12 @@ export async function startBot(token: string) {
           "❌ Brak uprawnień Intents! Włącz 'Server Members Intent' i 'Message Content Intent' w Discord Developer Portal → Bot → Privileged Gateway Intents.",
       };
     }
+
     if (msg.includes("Timeout")) {
-      return { success: false, message: "❌ Timeout - Discord nie odpowiada. Spróbuj ponownie." };
+      return {
+        success: false,
+        message: "❌ Timeout - Discord nie odpowiada. Spróbuj ponownie.",
+      };
     }
 
     return { success: false, message: `❌ Błąd: ${msg}` };

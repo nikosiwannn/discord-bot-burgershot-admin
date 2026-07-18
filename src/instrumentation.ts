@@ -138,7 +138,9 @@ export async function register() {
         console.error("[instrumentation] Bot auto-start error:", e);
       }
     } else {
-      console.log("[instrumentation] No DISCORD_TOKEN set, bot will not auto-start. Use the web panel to start it.");
+      console.log(
+        "[instrumentation] No DISCORD_TOKEN set, bot will not auto-start. Use the web panel to start it."
+      );
     }
   }
 }

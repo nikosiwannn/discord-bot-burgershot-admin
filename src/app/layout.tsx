@@ -3,16 +3,14 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "🍔 BurgerShot Manager Bot",
-  description: "Panel konfiguracyjny bota Discord do zarządzania Burger Shot",
+  title: "🍔 BurgerShot Manager Bot — Panel Administracyjny",
+  description: "Panel administracyjny Discord Bota Burger Shot HR",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pl">
-      <body className="bg-gray-950 text-gray-100 antialiased min-h-screen">
-        {children}
-      </body>
+      <body className="bg-gray-950 text-white antialiased">{children}</body>
     </html>
   );
 }
