@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { employees, actionHistory } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { employees, actionHistory, positions } from "@/db/schema";
+import { desc, asc } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -15,9 +15,15 @@ export async function GET() {
       .from(actionHistory)
       .orderBy(desc(actionHistory.createdAt));
 
+    const allPositions = await db
+      .select()
+      .from(positions)
+      .orderBy(asc(positions.level));
+
     return NextResponse.json({
       employees: allEmployees,
       history: allHistory,
+      positions: allPositions,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

@@ -116,6 +116,7 @@ export default function Home() {
 
   const [employeesList, setEmployeesList] = useState<Employee[]>([]);
   const [historyList, setHistoryList] = useState<HistoryEntry[]>([]);
+  const [allPositions, setAllPositions] = useState<Position[]>([]);
 
   // Fetch bot status
   const fetchStatus = useCallback(async () => {
@@ -235,7 +236,20 @@ export default function Home() {
     try {
       const res = await fetch("/api/employees");
       const data = await res.json();
-      setEmployeesList(data.employees || []);
+      const positionsData: Position[] = data.positions || [];
+      setAllPositions(positionsData);
+      
+      // Sort employees by position level (highest first)
+      const emps: Employee[] = data.employees || [];
+      const sortedEmps = emps.sort((a, b) => {
+        const posA = positionsData.find(p => p.name === a.position);
+        const posB = positionsData.find(p => p.name === b.position);
+        const levelA = posA?.level ?? 0;
+        const levelB = posB?.level ?? 0;
+        return levelB - levelA; // Descending (highest first)
+      });
+      
+      setEmployeesList(sortedEmps);
       setHistoryList(data.history || []);
     } catch {
       /* ignore */
@@ -396,7 +410,7 @@ export default function Home() {
                 <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">👥 Zarządzanie Pracownikami</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {[
-                    { cmd: "/zatrudnij", icon: "📥", desc: "Zatrudnij nowego pracownika", params: "@użytkownik, stanowisko", perm: "Manager+" },
+                    { cmd: "/zatrudnij", icon: "📥", desc: "Zatrudnij nowego pracownika", params: "@użytkownik, lvl (np. 1)", perm: "Manager+" },
                     { cmd: "/awans", icon: "📈", desc: "Daj awans pracownikowi", params: "@użytkownik", perm: "Manager+" },
                     { cmd: "/degraduj", icon: "📉", desc: "Degraduj pracownika", params: "@użytkownik, powód", perm: "Manager+" },
                     { cmd: "/zwolnij", icon: "❌", desc: "Zwolnij pracownika", params: "@użytkownik, powód", perm: "Manager+" },
@@ -855,6 +869,7 @@ export default function Home() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-800">
+                        <th className="text-left py-2 px-3 text-gray-400">Lv.</th>
                         <th className="text-left py-2 px-3 text-gray-400">Użytkownik</th>
                         <th className="text-left py-2 px-3 text-gray-400">Stanowisko</th>
                         <th className="text-left py-2 px-3 text-gray-400">Status</th>
@@ -866,8 +881,13 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody>
-                      {employeesList.map((emp) => (
+                      {employeesList.map((emp) => {
+                        const pos = allPositions.find(p => p.name === emp.position);
+                        return (
                         <tr key={emp.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                          <td className="py-2 px-3 text-orange-400 font-mono font-bold">
+                            {pos?.level ?? "?"}
+                          </td>
                           <td className="py-2 px-3 text-white">{emp.discordUsername}</td>
                           <td className="py-2 px-3 text-orange-300">{emp.position}</td>
                           <td className="py-2 px-3">
@@ -885,7 +905,7 @@ export default function Home() {
                             {new Date(emp.hiredAt).toLocaleDateString("pl-PL")}
                           </td>
                         </tr>
-                      ))}
+                      )})}
                     </tbody>
                   </table>
                 </div>

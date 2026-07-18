@@ -145,6 +145,11 @@ async function getPositionByName(guildId: string, name: string) {
   return allPositions.find((p) => p.name === name) ?? null;
 }
 
+async function getPositionByLevel(guildId: string, level: number) {
+  const allPositions = await getPositions(guildId);
+  return allPositions.find((p) => p.level === level) ?? null;
+}
+
 // =================== REGISTER COMMANDS ===================
 
 async function registerCommands(token: string, clientId: string) {
@@ -155,8 +160,8 @@ async function registerCommands(token: string, clientId: string) {
       .addUserOption((opt) =>
         opt.setName("użytkownik").setDescription("Kogo zatrudnić").setRequired(true)
       )
-      .addStringOption((opt) =>
-        opt.setName("stanowisko").setDescription("Stanowisko pracownika").setRequired(true)
+      .addIntegerOption((opt) =>
+        opt.setName("lvl").setDescription("Level stanowiska (1 = najniższe)").setRequired(true).setMinValue(1)
       ),
 
     new SlashCommandBuilder()
@@ -418,7 +423,7 @@ async function handleZatrudnij(interaction: any) {
   if (!(await checkPermission(interaction, "manager"))) return;
 
   const targetUser = interaction.options.getUser("użytkownik");
-  const positionName = interaction.options.getString("stanowisko");
+  const level = interaction.options.getInteger("lvl");
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
@@ -440,15 +445,19 @@ async function handleZatrudnij(interaction: any) {
     return;
   }
 
-  // Find position role
-  const pos = await getPositionByName(guild.id, positionName);
+  // Find position by level
+  const pos = await getPositionByLevel(guild.id, level);
   if (!pos) {
+    const allPositions = await getPositions(guild.id);
+    const availableLevels = allPositions.map(p => `Lv.${p.level} = ${p.name}`).join(", ");
     await interaction.reply({
-      content: `❌ Stanowisko **${positionName}** nie istnieje! Dodaj je w panelu konfiguracyjnym.`,
+      content: `❌ Stanowisko z poziomem **${level}** nie istnieje!\n\n📋 Dostępne stanowiska: ${availableLevels || "brak - dodaj je w panelu"}`,
       ephemeral: true,
     });
     return;
   }
+  
+  const positionName = pos.name;
 
   // Create employee record
   const [employee] = await db
