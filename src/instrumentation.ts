@@ -43,7 +43,7 @@ export async function register() {
       -- Action history table
       CREATE TABLE IF NOT EXISTS action_history (
         id SERIAL PRIMARY KEY,
-        employee_id UUID NOT NULL REFERENCES employees(id),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
         discord_user_id TEXT NOT NULL,
         action_type action_type NOT NULL,
         performed_by TEXT NOT NULL,
@@ -102,9 +102,27 @@ export async function register() {
       CREATE INDEX IF NOT EXISTS idx_positions_guild_id ON positions(guild_id);
     `;
 
+    const fixForeignKeySQL = `
+      -- Fix foreign key to CASCADE if it exists without it
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'action_history_employee_id_fkey'
+          AND table_name = 'action_history'
+        ) THEN
+          ALTER TABLE action_history DROP CONSTRAINT action_history_employee_id_fkey;
+          ALTER TABLE action_history 
+            ADD CONSTRAINT action_history_employee_id_fkey 
+            FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `;
+
     try {
       await pool.query(createTablesSQL);
       console.log("[instrumentation] Database tables ensured");
+      await pool.query(fixForeignKeySQL);
+      console.log("[instrumentation] Foreign key CASCADE ensured");
     } catch (e) {
       console.error("[instrumentation] Database setup error:", e);
     }

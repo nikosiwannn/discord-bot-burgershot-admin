@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS employees (
 -- Historia akcji
 CREATE TABLE IF NOT EXISTS action_history (
   id SERIAL PRIMARY KEY,
-  employee_id UUID NOT NULL REFERENCES employees(id),
+  employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
   discord_user_id TEXT NOT NULL,
   action_type action_type NOT NULL,
   performed_by TEXT NOT NULL,

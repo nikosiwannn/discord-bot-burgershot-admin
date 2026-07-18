@@ -57,7 +57,7 @@ export const employees = pgTable("employees", {
 // Historia akcji
 export const actionHistory = pgTable("action_history", {
   id: serial("id").primaryKey(),
-  employeeId: uuid("employee_id").references(() => employees.id).notNull(),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
   discordUserId: text("discord_user_id").notNull(),
   actionType: actionTypeEnum("action_type").notNull(),
   performedBy: text("performed_by").notNull(),
