@@ -76,12 +76,12 @@ async function checkPermission(
 ): Promise<boolean> {
   const guildId = interaction.guild?.id;
   if (!guildId) {
-    await interaction.reply({ content: "❌ Ta komenda działa tylko na serwerze.", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ta komenda działa tylko na serwerze." });
     return false;
   }
   const config = await getGuildConfig(guildId);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji serwera. Ustaw config w panelu webowym.", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji serwera. Ustaw config w panelu webowym." });
     return false;
   }
 
@@ -101,9 +101,8 @@ async function checkPermission(
     if (config.roleSupportId && roles.has(config.roleSupportId)) return true;
   }
 
-  await interaction.reply({
+  await interaction.editReply({
     content: "❌ Nie masz uprawnień do użycia tej komendy!",
-    ephemeral: true,
   });
   return false;
 }
@@ -427,7 +426,7 @@ async function handleZatrudnij(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji serwera!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji serwera!" });
     return;
   }
 
@@ -438,9 +437,8 @@ async function handleZatrudnij(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (existing.length > 0) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ **${targetUser.username}** jest już zatrudniony jako **${existing[0].position}**!`,
-      ephemeral: true,
     });
     return;
   }
@@ -450,9 +448,8 @@ async function handleZatrudnij(interaction: any) {
   if (!pos) {
     const allPositions = await getPositions(guild.id);
     const availableLevels = allPositions.map(p => `Lv.${p.level} = ${p.name}`).join(", ");
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ Stanowisko z poziomem **${level}** nie istnieje!\n\n📋 Dostępne stanowiska: ${availableLevels || "brak - dodaj je w panelu"}`,
-      ephemeral: true,
     });
     return;
   }
@@ -502,7 +499,7 @@ async function handleZatrudnij(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   // Send DM to new employee
   const dmEmbed = new EmbedBuilder()
@@ -545,7 +542,7 @@ async function handleAwans(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -555,7 +552,7 @@ async function handleAwans(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -563,9 +560,8 @@ async function handleAwans(interaction: any) {
   const nextPos = await getNextPosition(guild.id, emp.position);
 
   if (!nextPos) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ **${targetUser.username}** ma już najwyższe stanowisko (**${emp.position}**)!`,
-      ephemeral: true,
     });
     return;
   }
@@ -607,7 +603,7 @@ async function handleAwans(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   const logEmbed = new EmbedBuilder()
     .setAuthor({ name: "🍔 BurgerShot HR • Awans" })
@@ -634,7 +630,7 @@ async function handleDegraduj(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -644,7 +640,7 @@ async function handleDegraduj(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -652,9 +648,8 @@ async function handleDegraduj(interaction: any) {
   const prevPos = await getPrevPosition(guild.id, emp.position);
 
   if (!prevPos) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ **${targetUser.username}** ma już najniższe stanowisko (**${emp.position}**)!`,
-      ephemeral: true,
     });
     return;
   }
@@ -694,7 +689,7 @@ async function handleDegraduj(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   const logEmbed = new EmbedBuilder()
     .setAuthor({ name: "🍔 BurgerShot HR • Degradacja" })
@@ -721,7 +716,7 @@ async function handleZwolnij(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -731,7 +726,7 @@ async function handleZwolnij(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -776,7 +771,7 @@ async function handleZwolnij(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   // DM
   const dmEmbed = new EmbedBuilder()
@@ -820,7 +815,7 @@ async function handlePlus(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -830,7 +825,7 @@ async function handlePlus(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -1004,7 +999,7 @@ async function handlePlus(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   // Log to #plusy-minusy
   const logEmbed = new EmbedBuilder()
@@ -1033,7 +1028,7 @@ async function handleMinus(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -1043,7 +1038,7 @@ async function handleMinus(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -1142,7 +1137,7 @@ async function handleMinus(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   // Log to #plusy-minusy
   const logEmbed = new EmbedBuilder()
@@ -1178,7 +1173,7 @@ async function handleKarta(interaction: any) {
     .orderBy(desc(employees.createdAt));
 
   if (allEmps.length === 0) {
-    await interaction.reply({ content: "❌ Brak danych o tym użytkowniku!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak danych o tym użytkowniku!" });
     return;
   }
 
@@ -1269,7 +1264,7 @@ async function handleKarta(interaction: any) {
     .setFooter({ text: `ID: ${emp.id}` })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 // =================== PRACOWNIK (WYSZUKIWANIE) ===================
@@ -1287,7 +1282,7 @@ async function handlePracownik(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest aktywnym pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest aktywnym pracownikiem!" });
     return;
   }
 
@@ -1314,7 +1309,7 @@ async function handlePracownik(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 // =================== STATYSTYKI ===================
@@ -1366,7 +1361,7 @@ async function handleStatystyki(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 // =================== RANKING ===================
@@ -1380,7 +1375,7 @@ async function handleRanking(interaction: any) {
     .where(eq(employees.status, "active"));
 
   if (activeEmps.length === 0) {
-    await interaction.reply({ content: "❌ Brak aktywnych pracowników!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak aktywnych pracowników!" });
     return;
   }
 
@@ -1427,7 +1422,7 @@ async function handleRanking(interaction: any) {
     .setFooter({ text: `Łącznie ${activeEmps.length} aktywnych pracowników` })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 // =================== WYPOWIEDZENIE ===================
@@ -1440,7 +1435,7 @@ async function handleWypowiedzenie(interaction: any) {
   const guild = interaction.guild as Guild;
   const config = await getGuildConfig(guild.id);
   if (!config) {
-    await interaction.reply({ content: "❌ Brak konfiguracji!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Brak konfiguracji!" });
     return;
   }
 
@@ -1450,7 +1445,7 @@ async function handleWypowiedzenie(interaction: any) {
     .where(and(eq(employees.discordUserId, targetUser.id), eq(employees.status, "active")));
 
   if (emps.length === 0) {
-    await interaction.reply({ content: "❌ Ten użytkownik nie jest pracownikiem!", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ten użytkownik nie jest pracownikiem!" });
     return;
   }
 
@@ -1502,7 +1497,7 @@ async function handleWypowiedzenie(interaction: any) {
     .setFooter({ text: "🍔 BurgerShot HR" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [replyEmbed] });
+  await interaction.editReply({ embeds: [replyEmbed] });
 
   // Log
   const logEmbed = new EmbedBuilder()
@@ -1528,6 +1523,9 @@ async function handleInteraction(interaction: Interaction) {
   if (!interaction.isChatInputCommand()) return;
 
   try {
+    // Defer reply immediately to avoid 3s Discord timeout
+    await interaction.deferReply({ ephemeral: false });
+
     switch (interaction.commandName) {
       case "zatrudnij":
         await handleZatrudnij(interaction);
@@ -1568,7 +1566,7 @@ async function handleInteraction(interaction: Interaction) {
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({ content: "❌ Wystąpił błąd. Spróbuj ponownie.", ephemeral: true }).catch(() => {});
     } else {
-      await interaction.reply({ content: "❌ Wystąpił błąd. Spróbuj ponownie.", ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: "❌ Wystąpił błąd. Spróbuj ponownie." }).catch(() => {});
     }
   }
 }
