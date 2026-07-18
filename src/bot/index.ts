@@ -294,6 +294,9 @@ async function removeAllBsRoles(guild: Guild, userId: string, config: any) {
     config.rolePochwala2Id,
     config.roleNagana1Id,
     config.roleNagana2Id,
+    config.roleMinus1Id,
+    config.roleMinus2Id,
+    config.roleMinus3Id,
   ].filter(Boolean);
 
   // Also remove all position roles
@@ -357,6 +360,27 @@ async function updateReprimandRoles(
     await safeAddRole(guild, userId, config.roleNagana2Id);
   } else if (reprimands === 1 && config.roleNagana1Id) {
     await safeAddRole(guild, userId, config.roleNagana1Id);
+  }
+}
+
+async function updateMinusRoles(
+  guild: Guild,
+  userId: string,
+  config: any,
+  minusCount: number
+) {
+  // Remove all minus roles first
+  if (config.roleMinus1Id) await safeRemoveRole(guild, userId, config.roleMinus1Id);
+  if (config.roleMinus2Id) await safeRemoveRole(guild, userId, config.roleMinus2Id);
+  if (config.roleMinus3Id) await safeRemoveRole(guild, userId, config.roleMinus3Id);
+
+  // Add the appropriate one
+  if (minusCount >= 3 && config.roleMinus3Id) {
+    await safeAddRole(guild, userId, config.roleMinus3Id);
+  } else if (minusCount === 2 && config.roleMinus2Id) {
+    await safeAddRole(guild, userId, config.roleMinus2Id);
+  } else if (minusCount === 1 && config.roleMinus1Id) {
+    await safeAddRole(guild, userId, config.roleMinus1Id);
   }
 }
 
@@ -1034,6 +1058,11 @@ async function handleMinus(interaction: any) {
     newMinusCount = 0;
     newReprimands += 1;
 
+    // Remove minus roles when getting reprimand
+    if (config.roleMinus1Id) await safeRemoveRole(guild, targetUser.id, config.roleMinus1Id);
+    if (config.roleMinus2Id) await safeRemoveRole(guild, targetUser.id, config.roleMinus2Id);
+    if (config.roleMinus3Id) await safeRemoveRole(guild, targetUser.id, config.roleMinus3Id);
+
     await db.insert(actionHistory).values({
       employeeId: emp.id,
       discordUserId: targetUser.id,
@@ -1076,6 +1105,9 @@ async function handleMinus(interaction: any) {
 
       await sendLog(guild, config.channelAwanseDegradyId, notifEmbed);
     }
+  } else {
+    // Not enough for reprimand yet - update minus roles
+    await updateMinusRoles(guild, targetUser.id, config, newMinusCount);
   }
 
   await db

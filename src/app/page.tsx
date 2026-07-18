@@ -23,6 +23,9 @@ interface GuildConfigData {
   rolePlus1Id: string;
   rolePlus2Id: string;
   rolePlus3Id: string;
+  roleMinus1Id: string;
+  roleMinus2Id: string;
+  roleMinus3Id: string;
   rolePochwala1Id: string;
   rolePochwala2Id: string;
   roleNagana1Id: string;
@@ -81,6 +84,9 @@ const DEFAULT_CONFIG: GuildConfigData = {
   rolePlus1Id: "",
   rolePlus2Id: "",
   rolePlus3Id: "",
+  roleMinus1Id: "",
+  roleMinus2Id: "",
+  roleMinus3Id: "",
   rolePochwala1Id: "",
   rolePochwala2Id: "",
   roleNagana1Id: "",
@@ -384,26 +390,98 @@ export default function Home() {
             {/* Commands info */}
             <div className="bg-gray-900/50 rounded-2xl border border-gray-800 p-6">
               <h2 className="text-xl font-bold text-orange-400 mb-4">📋 Komendy Bota</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[
-                  { cmd: "/zatrudnij", desc: "Zatrudnij pracownika", perm: "Manager+" },
-                  { cmd: "/awans", desc: "Awansuj pracownika", perm: "Manager+" },
-                  { cmd: "/degraduj", desc: "Degraduj pracownika", perm: "Manager+" },
-                  { cmd: "/zwolnij", desc: "Zwolnij pracownika", perm: "Manager+" },
-                  { cmd: "/plus", desc: "Daj plusa", perm: "Support+" },
-                  { cmd: "/minus", desc: "Daj minusa", perm: "Support+" },
-                  { cmd: "/karta", desc: "Karta pracownika", perm: "Support+" },
-                  { cmd: "/pracownik", desc: "Info o pracowniku", perm: "Support+" },
-                  { cmd: "/statystyki", desc: "Statystyki BS", perm: "Support+" },
-                  { cmd: "/ranking", desc: "Ranking pracowników", perm: "Support+" },
-                  { cmd: "/wypowiedzenie", desc: "Wypowiedzenie", perm: "Manager+" },
-                ].map((c) => (
-                  <div key={c.cmd} className="bg-gray-800/50 rounded-lg p-3">
-                    <code className="text-orange-400 font-mono text-sm">{c.cmd}</code>
-                    <p className="text-sm text-gray-400 mt-1">{c.desc}</p>
-                    <span className="text-xs text-gray-500">{c.perm}</span>
+              
+              {/* Zarządzanie pracownikami */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">👥 Zarządzanie Pracownikami</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { cmd: "/zatrudnij", icon: "📥", desc: "Zatrudnij nowego pracownika", params: "@użytkownik, stanowisko", perm: "Manager+" },
+                    { cmd: "/awans", icon: "📈", desc: "Daj awans pracownikowi", params: "@użytkownik", perm: "Manager+" },
+                    { cmd: "/degraduj", icon: "📉", desc: "Degraduj pracownika", params: "@użytkownik, powód", perm: "Manager+" },
+                    { cmd: "/zwolnij", icon: "❌", desc: "Zwolnij pracownika", params: "@użytkownik, powód", perm: "Manager+" },
+                    { cmd: "/wypowiedzenie", icon: "📝", desc: "Wypowiedzenie / zwolnienie z archiwizacją", params: "@kto, powód", perm: "Manager+" },
+                  ].map((c) => (
+                    <div key={c.cmd} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">{c.icon}</span>
+                        <code className="text-orange-400 font-mono font-bold">{c.cmd}</code>
+                      </div>
+                      <p className="text-sm text-gray-300">{c.desc}</p>
+                      <p className="text-xs text-gray-500 mt-1">Parametry: {c.params}</p>
+                      <span className="inline-block mt-2 text-xs bg-orange-900/30 text-orange-300 px-2 py-0.5 rounded">{c.perm}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System ocen */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">⭐ System Ocen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { cmd: "/plus", icon: "➕", desc: "Przyznaj plus pracownikowi (3 plusy = pochwała)", params: "@użytkownik, powód", perm: "Support+" },
+                    { cmd: "/minus", icon: "➖", desc: "Przyznaj minus pracownikowi (3 minusy = nagana)", params: "@użytkownik, powód", perm: "Support+" },
+                  ].map((c) => (
+                    <div key={c.cmd} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">{c.icon}</span>
+                        <code className="text-orange-400 font-mono font-bold">{c.cmd}</code>
+                      </div>
+                      <p className="text-sm text-gray-300">{c.desc}</p>
+                      <p className="text-xs text-gray-500 mt-1">Parametry: {c.params}</p>
+                      <span className="inline-block mt-2 text-xs bg-green-900/30 text-green-300 px-2 py-0.5 rounded">{c.perm}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Informacje */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">📊 Informacje</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {[
+                    { cmd: "/karta", icon: "📄", desc: "Pełna karta pracownika z historią", params: "@użytkownik", perm: "Support+" },
+                    { cmd: "/pracownik", icon: "🔍", desc: "Szybkie info o pracowniku", params: "@użytkownik", perm: "Support+" },
+                    { cmd: "/statystyki", icon: "📊", desc: "Statystyki Burger Shot", params: "brak", perm: "Support+" },
+                    { cmd: "/ranking", icon: "🏆", desc: "Ranking pracowników", params: "brak", perm: "Support+" },
+                  ].map((c) => (
+                    <div key={c.cmd} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">{c.icon}</span>
+                        <code className="text-orange-400 font-mono font-bold">{c.cmd}</code>
+                      </div>
+                      <p className="text-sm text-gray-300">{c.desc}</p>
+                      <p className="text-xs text-gray-500 mt-1">Parametry: {c.params}</p>
+                      <span className="inline-block mt-2 text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">{c.perm}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System rang info */}
+              <div className="mt-6 p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                <h3 className="text-sm font-semibold text-orange-300 mb-3">⭐ System Rang Plusów/Minusów</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-green-400 font-semibold mb-2">Plusy → Pochwały → Awans</p>
+                    <ul className="text-gray-400 space-y-1">
+                      <li>⭐ 1/3 — 1 plus</li>
+                      <li>⭐⭐ 2/3 — 2 plusy</li>
+                      <li>⭐⭐⭐ 3/3 → 🏆 1/2 Pochwała (reset plusów)</li>
+                      <li>🏆 2/2 Pochwały → 🚀 Automatyczny awans!</li>
+                    </ul>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-red-400 font-semibold mb-2">Minusy → Nagany → Alert</p>
+                    <ul className="text-gray-400 space-y-1">
+                      <li>❌ 1/3 — 1 minus</li>
+                      <li>❌❌ 2/3 — 2 minusy</li>
+                      <li>❌❌❌ 3/3 → ⚠️ 1/2 Nagana (reset minusów)</li>
+                      <li>⚠️ 2/2 Nagany → 🚨 Powiadomienie zarządu</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -525,6 +603,28 @@ export default function Home() {
                       {[
                         { key: "rolePochwala1Id" as const, label: "🏆 1/2 Pochwała" },
                         { key: "rolePochwala2Id" as const, label: "🏆 2/2 Pochwały" },
+                      ].map((r) => (
+                        <div key={r.key}>
+                          <label className="block text-sm text-gray-400 mb-1">{r.label}</label>
+                          <input
+                            value={config[r.key] || ""}
+                            onChange={(e) => setConfig((c) => ({ ...c, [r.key]: e.target.value }))}
+                            placeholder="ID roli"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Minus roles */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-orange-300 mb-3">❌ Role Minusów</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        { key: "roleMinus1Id" as const, label: "❌ 1/3" },
+                        { key: "roleMinus2Id" as const, label: "❌❌ 2/3" },
+                        { key: "roleMinus3Id" as const, label: "❌❌❌ 3/3" },
                       ].map((r) => (
                         <div key={r.key}>
                           <label className="block text-sm text-gray-400 mb-1">{r.label}</label>
@@ -944,6 +1044,10 @@ CREATE TABLE IF NOT EXISTS guild_config (
   -- Role nagan
   role_nagana_1_id TEXT,
   role_nagana_2_id TEXT,
+  -- Role minusów
+  role_minus_1_id TEXT,
+  role_minus_2_id TEXT,
+  role_minus_3_id TEXT,
   -- Ustawienia
   pluses_for_commendation INTEGER NOT NULL DEFAULT 3,
   minuses_for_reprimand INTEGER NOT NULL DEFAULT 3,

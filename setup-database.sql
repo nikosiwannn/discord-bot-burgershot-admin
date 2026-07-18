@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS guild_config (
   -- Role nagan
   role_nagana_1_id TEXT,
   role_nagana_2_id TEXT,
+  -- Role minusów
+  role_minus_1_id TEXT,
+  role_minus_2_id TEXT,
+  role_minus_3_id TEXT,
   -- Ustawienia
   pluses_for_commendation INTEGER NOT NULL DEFAULT 3,
   minuses_for_reprimand INTEGER NOT NULL DEFAULT 3,

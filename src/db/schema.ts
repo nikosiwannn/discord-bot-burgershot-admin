@@ -94,6 +94,10 @@ export const guildConfig = pgTable("guild_config", {
   // Role nagan
   roleNagana1Id: text("role_nagana_1_id"), // ⚠️ 1/2 Nagana
   roleNagana2Id: text("role_nagana_2_id"), // ⚠️ 2/2 Nagany
+  // Role minusów
+  roleMinus1Id: text("role_minus_1_id"), // ❌ 1/3
+  roleMinus2Id: text("role_minus_2_id"), // ❌❌ 2/3
+  roleMinus3Id: text("role_minus_3_id"), // ❌❌❌ 3/3
   // Ustawienia
   plusesForCommendation: integer("pluses_for_commendation").default(3).notNull(),
   minusesForReprimand: integer("minuses_for_reprimand").default(3).notNull(),
